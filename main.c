@@ -22,23 +22,19 @@
 
 
 void clearData();
-
 void setupTimer();
-
 void nrf24_Start();
 
 //server
 void sensor11start();
-
 void waitForSensor11();
-
 void sensor11sendViaUart();
 
 
 uint8_t pipe1[] = {0xF0, 0xF0, 0xF0, 0xF0, 0xE1};
 uint8_t pipe2[] = {0xF0, 0xF0, 0xF0, 0xF0, 0x95};
 uint8_t data[9];
-uint8_t i = 0;
+//uint8_t i = 0;
 float t = 0;
 struct MEASURE BME180measure = {0, 0, 0, 0, 11};
 volatile uint8_t stage = 0;
@@ -90,9 +86,9 @@ void nrf24_Start() {
     slNRF_SetDataRate(RF24_250KBPS);
     slNRF_SetPALevel(RF24_PA_MAX);
     slNRF_SetChannel(77);
-    slNRF_EnableDynamicPayloads();
-    slNRF_EnableAckPayload();
-    slNRF_SetRetries(1, 3);
+    slNRF_DisableDynamicPayloads();
+    // slNRF_EnableAckPayload();
+    slNRF_SetRetries(0, 3);
     slNRF_AutoAck(1);
     slNRF_PowerUp();
     slNRF_StartListening();
@@ -119,6 +115,11 @@ void sensor11start() {
         //     i = 0;
         // }
     }
+    //slNRF_Sent((uint8_t *) startStringSensor11, sizeof(startStringSensor11));
+    // i++;
+    // if(i>9){
+    //     i = 0;
+    // }
     clearData();
     slNRF_StartListening();
     stage = nextStage;
@@ -152,6 +153,7 @@ void sensor11sendViaUart() {
     slUART_LogDec(BME180measure.sensorId);
     slUART_WriteStringNl("");
     stage = nextStage;
+    clearData();
 }
 
 ISR(TIMER0_OVF_vect) {

@@ -418,15 +418,21 @@ void slNRF_EnableDynamicPayloads() {
 
 }
 
+
+void slNRF_DisableDynamicPayloads() {
+    slNRF_SetRegister(FEATURE, slNRF_GetRegister(FEATURE, 0) & ~_BV(EN_DPL));
+    slNRF_SetRegister(DYNPD,0);
+    dynamicPayloadsEnabled = 0;
+}
+
 void slNRF_EnableAckPayload() {
     // enable ack payload and dynamic payload features
     //toggle_features();
     slNRF_SetRegister(FEATURE, slNRF_GetRegister(FEATURE, 0) | _BV(EN_ACK_PAY) | _BV(EN_DPL));
-    slNRF_SetRegister(FEATURE, slNRF_GetRegister(FEATURE, 0) | _BV(EN_ACK_PAY) | _BV(EN_DPL));
 
     // Enable dynamic payload on pipes 0 & 1
-    slNRF_SetRegister(DYNPD, slNRF_GetRegister(DYNPD, 1) | _BV(DPL_P1) | _BV(DPL_P0));
-    dynamicPayloadsEnabled = 1;
+    // slNRF_SetRegister(DYNPD, slNRF_GetRegister(DYNPD, 1) | _BV(DPL_P1) | _BV(DPL_P0));
+    // dynamicPayloadsEnabled = 1;
 }
 
 void slNRF_SetRetries(uint8_t delay, uint8_t countOfTray) {
