@@ -144,9 +144,9 @@
 #define EN_ACK_PAY  1
 #define EN_DYN_ACK  0
 
-//#define RF24_1MBPS   0
-//#define RF24_2MBPS   1
-//#define RF24_250KBPS 2
+// #define RF24_1MBPS   0
+// #define RF24_2MBPS   1
+// #define RF24_250KBPS 2
 
 //#define RF24_PA_MIN   0
 //#define RF24_PA_LOW   1
@@ -211,6 +211,7 @@ void slNRF_AutoAck(uint8_t isOn);
 void slNRF_showDebugData();
 #endif
 void slNRF_PowerUp();
+void slNRF_PowerDown();
 void slNRF_FlushTX();
 void slNRF_FlushRX();
 void slNRF_StartListening();

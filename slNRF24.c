@@ -600,6 +600,14 @@ void slNRF_PowerUp() {
         _delay_ms(5);
     }
 }
+void slNRF_PowerDown() {
+    uint8_t cfg = slNRF_GetRegister(CONFIG, 0);
+    CE_LOW();
+    // if not powered up then power up and wait for the radio to initialize
+    if (!(cfg & _BV(PWR_UP))) {
+        slNRF_SetRegister(CONFIG, cfg & ~_BV(PWR_UP));
+    }
+}
 
 void slNRF_StartListening() {
     slNRF_SetRegister(CONFIG, slNRF_GetRegister(CONFIG, 0) | _BV(PRIM_RX));
@@ -649,18 +657,17 @@ void slNRF_FlushRX() {
 uint8_t slNRF_WritePayload(const uint8_t buf[], uint8_t data_len, const uint8_t writeType) {
     uint8_t status;
 
-    data_len = rf24_min(data_len, payloadWidth);
-    uint8_t blank_len = dynamicPayloadsEnabled ? 0 : payloadWidth - data_len;
+    // data_len = rf24_min(data_len, payloadWidth);
+    // uint8_t blank_len = dynamicPayloadsEnabled ? 0 : payloadWidth - data_len;
 
     CSN_LOW();
     status = slSPI_TransferInt(writeType);
     for (uint8_t i = 0; i < data_len; i++) {
-        //slUART_LogDecNl(buf[i]);
         slSPI_TransferInt(buf[i]);
     }
-    while (blank_len--) {
-        slSPI_TransferInt(0);
-    }
+    // while (blank_len--) {
+    //     slSPI_TransferInt(0);
+    // }
     CSN_HIGH();
     return status;
 }

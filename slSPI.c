@@ -27,24 +27,15 @@ void slSPI_Init() {
 
     //Run the data in at 16MHz/2 - 8MHz
     slSPI_SetClockDiv2();
+    //16MHz/4  = 4Mhz
+    //slSPI_SetClockDiv4();
 
 }
 
 uint8_t slSPI_TransferInt(uint8_t data) {
-    /* Start transmission */
-//    slUART_WriteString("slSPI_TransferInt data: ");
-//    slUART_LogBinary(data);
     SPDR = data;
     asm volatile("nop");
     /* Wait for transmission complete */
     while (!(SPSR & _BV(SPIF))) ;
     return SPDR;
 }
-//
-//void slSPI_WriteString(const char myString[], char *buffOut) {
-//    uint8_t i = 0;
-//    while (myString[i]) {
-//        buffOut[i] = slSPI_TransferInt(myString[i]);
-//        i++;
-//    }
-//}
