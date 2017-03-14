@@ -14,6 +14,7 @@
 
 #include "main.h"
 #include "slUart.h"
+#include "slSPI.h"
 #include "slNRF24.h"
 #include "slBME180Measure.h"
 
@@ -73,25 +74,17 @@ void clearData() {
 }
 
 void setupTimer() {
+    slUART_WriteStringNl("StartTimer");
     TCCR0B |= (1 << CS02) | (1 << CS00);//prescaler 1024
     TIMSK0 |= (1 << TOIE0);//przerwanie przy przepłnieniu timera0
     sei();
 }
 
 void nrf24_Start() {
-    slNRF_Init();
-    slNRF_FlushTX();
-    slNRF_OpenWritingPipe(pipe1, 9);
-    slNRF_OpenReadingPipe(pipe2, 9, 1);
-    slNRF_SetDataRate(RF24_250KBPS);
-    slNRF_SetPALevel(RF24_PA_MAX);
-    slNRF_SetChannel(77);
-    slNRF_DisableDynamicPayloads();
-    // slNRF_EnableAckPayload();
-    slNRF_SetRetries(0, 3);
-    slNRF_AutoAck(1);
-    slNRF_PowerUp();
-    slNRF_StartListening();
+    slSPI_Init();
+    slUART_WriteStringNl("nrf Start");
+    slNRF24_SetupIo();
+    slNRF24_Config();
     clearData();
 }
 
@@ -100,28 +93,27 @@ void nrf24_Start() {
 //stage1
 void sensor11start() {
     counter = 0;
-    nextStage = 2;
-    slNRF_StopListening();
-    //startStringSensor11[0] = 48 + i;
+    nextStage = 0;
     slUART_WriteStringNl("Sensor11StartSending");
-    if (!slNRF_Sent((uint8_t *) startStringSensor11, sizeof(startStringSensor11))) {
-        //slUART_LogDec(i);
-        slUART_WriteStringNl("Sensor11SendFail");
-    } else {
-        //slUART_LogDec(i);
-        slUART_WriteStringNl("Sensor11SendOk");
-        // i++;
-        // if(i>9){
-        //     i = 0;
-        // }
-    }
-    //slNRF_Sent((uint8_t *) startStringSensor11, sizeof(startStringSensor11));
-    // i++;
-    // if(i>9){
-    //     i = 0;
-    // }
+    slNRF24_PowerUp();
+    _delay_ms(2000);
+    slNRF24_PacketBegin();
+    slSPI_TransferInt((uint8_t)startStringSensor11[0]);
+    slSPI_TransferInt((uint8_t)startStringSensor11[1]);
+    slSPI_TransferInt((uint8_t)startStringSensor11[3]);
+    slSPI_TransferInt((uint8_t)startStringSensor11[4]);
+    slSPI_TransferInt((uint8_t)startStringSensor11[6]);
+    slSPI_TransferInt((uint8_t)startStringSensor11[7]);
+    slSPI_TransferInt((uint8_t)startStringSensor11[8]);
+    slNRF24_PacketEnd();
+    slNRF24_Transmit();
+    _delay_ms(1000);
+    slNRF24_StopTransmit();
+    slNRF24_Flush();
+    slNRF24_ClearMaxrt();
+    slNRF24_PowerDown();
+    slUART_WriteStringNl("Sensor11SendOk");
     clearData();
-    slNRF_StartListening();
     stage = nextStage;
 }
 
@@ -129,13 +121,13 @@ void sensor11start() {
 void waitForSensor11() {
     nextStage = 3;
     counter = 0;
-    if (slNRF_Available()) {
-        //slUART_WriteStringNl("got data");
-        slNRF_Recive(data, sizeof(BME180measure));
-        BME180measure = returnMEASUREFromBuffer(data);
-        // _delay_ms(200);
-        stage = nextStage;
-    }
+//    if (slNRF_Available()) {
+//        //slUART_WriteStringNl("got data");
+//        slNRF_Recive(data, sizeof(BME180measure));
+//        BME180measure = returnMEASUREFromBuffer(data);
+//        // _delay_ms(200);
+//        stage = nextStage;
+//    }
 }
 
 //stage 3
