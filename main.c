@@ -84,10 +84,10 @@ void nrf24_Start() {
     slNRF_OpenWritingPipe(pipe1, 9);
     slNRF_OpenReadingPipe(pipe2, 9, 1);
     slNRF_SetDataRate(RF24_250KBPS);
-    slNRF_SetPALevel(RF24_PA_MAX);
+    slNRF_SetPALevel(RF24_PA_MIN);
     slNRF_SetChannel(77);
     slNRF_DisableDynamicPayloads();
-    // slNRF_EnableAckPayload();
+    slNRF_EnableAckPayload();
     slNRF_SetRetries(0, 3);
     slNRF_AutoAck(1);
     slNRF_PowerUp();
@@ -120,8 +120,8 @@ void sensor11start() {
     // if(i>9){
     //     i = 0;
     // }
-    clearData();
     slNRF_StartListening();
+    clearData();
     stage = nextStage;
 }
 
