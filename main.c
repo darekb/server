@@ -77,6 +77,14 @@ void setupTimer() {
     slUART_WriteStringNl("StartTimer");
     TCCR0B |= (1 << CS02) | (1 << CS00);//prescaler 1024
     TIMSK0 |= (1 << TOIE0);//przerwanie przy przepłnieniu timera0
+
+    DDRD &= ~(1 << DDD2);     // Clear the PD2 pin
+    // PD2 (PCINT0 pin) is now an input
+    PORTD |= (1 << PORTD2);    // turn On the Pull-up
+    // PD2 is now an input with pull-up enabled
+    EICRA |= (1 << ISC00);    // set INT0 to trigger on ANY logic change
+    EIMSK |= (1 << INT0);     // Turns on INT0
+
     sei();
 }
 
@@ -107,7 +115,7 @@ void sensor11start() {
     slSPI_TransferInt((uint8_t)startStringSensor11[8]);
     slNRF24_PacketEnd();
     slNRF24_Transmit();
-    _delay_ms(1000);
+    _delay_ms(5000);
     slNRF24_StopTransmit();
     slNRF24_Flush();
     slNRF24_ClearMaxrt();
@@ -165,4 +173,9 @@ ISR(TIMER0_OVF_vect) {
         counter2 = 0;
         stage = nextStage;
     }
+}
+
+
+ISR (INT0_vect){
+    slUART_WriteStringNl("0");
 }
