@@ -211,6 +211,7 @@ void slNRF_AutoAck(uint8_t isOn);
 #if showDebugDataNRF24
 void slNRF_showDebugData();
 #endif
+void slNRF_SetIRQs();
 void slNRF_PowerUp();
 void slNRF_PowerDown();
 void slNRF_FlushTX();

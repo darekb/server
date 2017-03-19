@@ -76,12 +76,12 @@ void setupTimer() {
     TCCR0B |= (1 << CS02) | (1 << CS00);//prescaler 1024
     TIMSK0 |= (1 << TOIE0);//przerwanie przy przepłnieniu timera0
 
-    DDRD &= ~(1 << DDD2);     // Clear the PD2 pin
-    // PD2 (PCINT0 pin) is now an input
-    PORTD |= (1 << PORTD2);    // turn On the Pull-up
-    // PD2 is now an input with pull-up enabled
-    EICRA |= (1 << ISC00);    // set INT0 to trigger on ANY logic change
-    EIMSK |= (1 << INT0);     // Turns on INT0
+//    DDRD &= ~(1 << DDD2);     // Clear the PD2 pin
+//    // PD2 (PCINT0 pin) is now an input
+//    PORTD |= (1 << PORTD2);    // turn On the Pull-up
+//    // PD2 is now an input with pull-up enabled
+//    EICRA |= (1 << ISC00);    // set INT0 to trigger on ANY logic change
+//    EIMSK |= (1 << INT0);     // Turns on INT0
 
     sei();
 }
@@ -89,6 +89,7 @@ void setupTimer() {
 void nrf24_Start() {
     slNRF_Init();
     slNRF_FlushTX();
+    slNRF_SetIRQs();
     slNRF_OpenWritingPipe(pipe1, 9);
     slNRF_OpenReadingPipe(pipe2, 9, 1);
     slNRF_SetDataRate(RF24_250KBPS);
@@ -109,10 +110,12 @@ void nrf24_Start() {
 void sensor11start() {
     counter = 0;
     nextStage = 2;
+//    slNRF_FlushTX();
+//    slNRF_FlushRX();
     slNRF_StopListening();
     //startStringSensor11[0] = 48 + i;
     slUART_WriteStringNl("Sensor11StartSending");
-    if (!slNRF_Sent((uint8_t *) startStringSensor11, sizeof(startStringSensor11))) {
+    if(!slNRF_Sent((uint8_t *) startStringSensor11, sizeof(startStringSensor11))) {
         //slUART_LogDec(i);
         slUART_WriteStringNl("Sensor11SendFail");
     } else {
@@ -182,9 +185,10 @@ ISR(TIMER0_OVF_vect) {
         stage = nextStage;
     }
 }
-
-
-ISR (INT0_vect)
-{
-    slUART_WriteStringNl("0");
-}
+//
+//
+//ISR (INT0_vect)
+//{
+//    //slUART_WriteStringNl("0");
+//
+//}

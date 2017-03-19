@@ -282,7 +282,8 @@ uint8_t slNRF_GetRegister(uint8_t address, uint8_t log) {
     dataIn[1] = slSPI_TransferInt(0x00);
     CSN_HIGH();
     if (log == 1) {
-        returnData(address);
+        //returnData(address);
+        //slUART_LogHexNl(dataIn[1]);
     }
     return dataIn[1];
 }
@@ -400,7 +401,7 @@ void slNRF_EnableDynamicPayloads() {
 #if showDebugDataNRF24
      slNRF_GetRegister(FEATURE, 1);
      slNRF_GetRegister(DYNPD, 1);
-    toggle_features();
+    //toggle_features();
 #endif
     slNRF_SetRegister(FEATURE, slNRF_GetRegister(FEATURE, 0) | _BV(EN_DPL));
 
@@ -592,6 +593,14 @@ void slNRF_showDebugData() {
 
 }
 #endif
+
+void slNRF_SetIRQs(){
+    uint8_t regConfig = slNRF_GetRegister(CONFIG, 0);
+    //regConfig |= _BV(MASK_RX_DR) | _BV(MASK_MAX_RT);
+    regConfig &= ~(0xf << 4);
+    //regConfig |= _BV(MASK_RX_DR) | _BV(MASK_MAX_RT);
+    slNRF_SetRegister(CONFIG,  regConfig);
+}
 
 void slNRF_PowerUp() {
     uint8_t cfg = slNRF_GetRegister(CONFIG, 0);
