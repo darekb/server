@@ -29,7 +29,6 @@ void nrf24_Start();
 
 //server
 void sensor11start();
-void waitForSensor11();
 void getDataFromSensor();
 void sensorSendDataViaUart();
 
@@ -56,10 +55,6 @@ int main(void) {
     slNRF24_IoInit();
     setupInt0();
     slNRF24_Init();
-    status = 0;
-    slNRF24_GetRegister(CONFIG, &status, 1);
-    slUART_WriteString("server CONFIG: ");
-    slUART_LogBinaryNl(status);
     sei();
     stage = 1;
     slUART_WriteStringNl("\nStart server");
@@ -69,9 +64,6 @@ int main(void) {
         switch (stage) {
             case 1:
                 sensor11start();
-                break;
-            case 2:
-                waitForSensor11();
                 break;
             case 3:
                 getDataFromSensor();
@@ -120,27 +112,10 @@ void sensor11start() {
     stage = 0;//wait for interupt
 }
 
-//stage 2
-void waitForSensor11() {
-    slUART_WriteStringNl("waitForSensor11");
-    slNRF24_FlushTx();
-    slNRF24_FlushRx();
-    slNRF24_Reset();
-    slNRF24_RxPowerUp();
-    stage = 0;
-    // slNRF24_GetRegister(STATUS, &status, 1);
-    // //slUART_LogBinaryNl(status);
-    // if((status & (1<< RX_DR)) != 0){
-    //     slUART_WriteStringNl("got data?????");
-    //     slNRF24_ReceivePayload();
-    //     //go to interupt
-    // }
-}
 
 //stage 3
 void getDataFromSensor(){
     slNRF24_RxPowerUp();
-    slUART_WriteStringNl("getDataFromSensor");
     clearData();
     slNRF24_GetRegister(R_RX_PAYLOAD,data,9);
     stage = 4;
@@ -148,7 +123,6 @@ void getDataFromSensor(){
 
 //stage 4
 void sensorSendDataViaUart() {
-    slUART_WriteStringNl("sensorSendDataViaUart");
     nextStage = 0;
     counter = 0;
     BME180measure = returnMEASUREFromBuffer(data);
@@ -173,12 +147,12 @@ ISR(TIMER0_OVF_vect) {
     } else {
         counter2 = counter2 + 1;
     }
-    if (counter == 920) {//15 sek
+    if (counter == 1840) {//30 sek
         counter = 0;
         counter2 = 0;
         stage = 1;
     }
-    if (counter2 == 1840) {//30 sek
+    if (counter2 == 2840) {//? sek
         counter = 0;
         counter2 = 0;
         stage = 1;
@@ -187,21 +161,16 @@ ISR(TIMER0_OVF_vect) {
 ISR(INT0_vect){
     status = 0;
     slNRF24_GetRegister(STATUS, &status, 1);
-    slUART_WriteString("Server STATUS: ");
-    slUART_LogBinaryNl(status);
     cli();
     if ((status & (1 << 6)) != 0) {
-        slUART_WriteStringNl("server got data");
         //got data
         stage = 3;//getDataFromSensor
     }
     if ((status & (1 << 5)) != 0) {
-        slUART_WriteStringNl("server sent data");
         slNRF24_FlushTx();
         slNRF24_FlushRx();
         slNRF24_Reset();
         slNRF24_RxPowerUp();
-        slUART_WriteStringNl("-----------");
         //sent data
         stage = 0;//wait for data from sensor
     }
