@@ -114,6 +114,7 @@ void sensor11start() {
     slNRF24_FlushTx();
     slNRF24_FlushRx();
     slUART_WriteStringNl("Sensor11StartSending");
+    slNRF24_TxPowerUp();
     slNRF24_TransmitPayload(&startStringSensor11, 9);
     clearData();
     stage = 0;//wait for interupt
@@ -125,7 +126,8 @@ void waitForSensor11() {
     slNRF24_FlushTx();
     slNRF24_FlushRx();
     slNRF24_Reset();
-    status = 0;
+    slNRF24_RxPowerUp();
+    stage = 0;
     // slNRF24_GetRegister(STATUS, &status, 1);
     // //slUART_LogBinaryNl(status);
     // if((status & (1<< RX_DR)) != 0){
@@ -137,7 +139,9 @@ void waitForSensor11() {
 
 //stage 3
 void getDataFromSensor(){
+    slNRF24_RxPowerUp();
     slUART_WriteStringNl("getDataFromSensor");
+    clearData();
     slNRF24_GetRegister(R_RX_PAYLOAD,data,9);
     stage = 4;
 }
@@ -145,7 +149,7 @@ void getDataFromSensor(){
 //stage 4
 void sensorSendDataViaUart() {
     slUART_WriteStringNl("sensorSendDataViaUart");
-    nextStage = 1;
+    nextStage = 0;
     counter = 0;
     BME180measure = returnMEASUREFromBuffer(data);
     slUART_LogDecWithSign(BME180measure.temperature);
@@ -174,7 +178,7 @@ ISR(TIMER0_OVF_vect) {
         counter2 = 0;
         stage = 1;
     }
-    if (counter2 == 920) {//15 sek
+    if (counter2 == 1840) {//30 sek
         counter = 0;
         counter2 = 0;
         stage = 1;
@@ -183,7 +187,7 @@ ISR(TIMER0_OVF_vect) {
 ISR(INT0_vect){
     status = 0;
     slNRF24_GetRegister(STATUS, &status, 1);
-    slUART_WriteStringNl("Server STATUS:");
+    slUART_WriteString("Server STATUS: ");
     slUART_LogBinaryNl(status);
     cli();
     if ((status & (1 << 6)) != 0) {
@@ -193,8 +197,13 @@ ISR(INT0_vect){
     }
     if ((status & (1 << 5)) != 0) {
         slUART_WriteStringNl("server sent data");
+        slNRF24_FlushTx();
+        slNRF24_FlushRx();
+        slNRF24_Reset();
+        slNRF24_RxPowerUp();
+        slUART_WriteStringNl("-----------");
         //sent data
-        stage = 2;//wait for data from sensor
+        stage = 0;//wait for data from sensor
     }
     sei();
 }
