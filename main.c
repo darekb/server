@@ -32,29 +32,21 @@ void sensor11start();
 void getDataFromSensor();
 void sensorSendDataViaUart();
 
-
-uint8_t pipe1[] = {0xF0, 0xF0, 0xF0, 0xF0, 0xE1};
-uint8_t pipe2[] = {0xF0, 0xF0, 0xF0, 0xF0, 0x95};
 uint8_t data[9];
 uint8_t status;
-//uint8_t i = 0;
-float t = 0;
 struct MEASURE BME180measure = {0, 0, 0, 0, 11};
 volatile uint8_t stage = 0;
-volatile uint8_t nextStage = 0;
 volatile uint16_t counter = 0;
 volatile uint16_t counter2 = 0;
-uint8_t t1[9] = {0x73, 0x74, 0x61, 0x72, 0x74, 0x2d, 0x73, 0x31, 0x31};
 char startStringSensor11[] = {'s', 't', 'a', 'r', 't', '-', 's', '1', '1'};
-uint8_t *arr;
 
 int main(void) {
     slUART_SimpleTransmitInit();
-    setupTimer();
     slSPI_Init();
     slNRF24_IoInit();
-    setupInt0();
     slNRF24_Init();
+    setupTimer();
+    setupInt0();
     sei();
     stage = 1;
     slUART_WriteStringNl("\nStart server");
@@ -87,6 +79,7 @@ void setupTimer() {
     TCCR0B |= (1 << CS02) | (1 << CS00);//prescaler 1024
     TIMSK0 |= (1 << TOIE0);//przerwanie przy przepłnieniu timera0
 }
+
 void setupInt0() {
    DDRD &= ~(1 << DDD2);     // Clear the PD2 pin
    // PD2 (PCINT0 pin) is now an input
@@ -115,6 +108,7 @@ void sensor11start() {
 
 //stage 3
 void getDataFromSensor(){
+    counter = 0;
     slNRF24_RxPowerUp();
     clearData();
     slNRF24_GetRegister(R_RX_PAYLOAD,data,9);
@@ -123,7 +117,6 @@ void getDataFromSensor(){
 
 //stage 4
 void sensorSendDataViaUart() {
-    nextStage = 0;
     counter = 0;
     BME180measure = returnMEASUREFromBuffer(data);
     slUART_LogDecWithSign(BME180measure.temperature);
@@ -136,7 +129,7 @@ void sensorSendDataViaUart() {
     slUART_WriteString("|");
     slUART_LogDec(BME180measure.sensorId);
     slUART_WriteStringNl("");
-    stage = nextStage;
+    stage = 0;
     clearData();
 }
 
@@ -147,12 +140,12 @@ ISR(TIMER0_OVF_vect) {
     } else {
         counter2 = counter2 + 1;
     }
-    if (counter == 1840) {//30 sek
+    if (counter == 1840) {//30 sek Next mesurements
         counter = 0;
         counter2 = 0;
         stage = 1;
     }
-    if (counter2 == 2840) {//? sek
+    if (counter2 == 2840) {//46.348 sek Reset to sending
         counter = 0;
         counter2 = 0;
         stage = 1;
