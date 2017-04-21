@@ -56,7 +56,7 @@ void slNRF24_GetRegister(uint8_t reg, uint8_t *dataIn, uint8_t len){
 
 
 //initierar nrf'en (obs nrfen måste vala i vila när detta sker CE-låg)
-void slNRF24_Init(void)
+void slNRF24_Init(uint8_t adress)
 {
     _delay_ms(100);	//allow radio to reach power down if shut down
     uint8_t val[5];
@@ -85,7 +85,7 @@ void slNRF24_Init(void)
     val[0]=0x0e;
     slNRF24_SetRegister(RF_SETUP, val, 1);
 
-    slNRF24_ChangeAddress(0x12);
+    slNRF24_ChangeAddress(adress);
 
     val[0]=9;
     slNRF24_SetRegister(RX_PW_P0, val, 1);
@@ -155,22 +155,22 @@ void slNRF24_TransmitPayload(void *dataIn, uint8_t len)
 }
 
 
-void slNRF24_TxPowerUp(){
+void slNRF24_TxPowerUp(uint8_t adress){
     uint8_t configReg;
     slNRF24_GetRegister(CONFIG, &configReg, 1);
     configReg |= (1<<PWR_UP);
     configReg &= ~(1<<PRIM_RX);
     slNRF24_SetRegister(CONFIG,&configReg,1);
     CE_LOW();
-    slNRF24_ChangeAddress(0x12);
+    slNRF24_ChangeAddress(adress);
 }
-void slNRF24_RxPowerUp(){
+void slNRF24_RxPowerUp(uint8_t adress){
     uint8_t configReg;
     slNRF24_GetRegister(CONFIG, &configReg, 1);
     configReg |= (1<<PWR_UP) | (1<<PRIM_RX);
     slNRF24_SetRegister(CONFIG,&configReg,1);
     CE_HIGH();
-    slNRF24_ChangeAddress(0x12);
+    slNRF24_ChangeAddress(adress);
     slNRF24_FlushTx();
 }
 void slNRF24_PowerDown(){

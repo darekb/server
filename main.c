@@ -11,6 +11,7 @@
 #endif
 
 #define showDebugDataMain 0
+#define sensorsCount 3
 
 #include "main.h"
 #include "slUart.h"
@@ -25,7 +26,6 @@
 void clearData();
 void setupTimer();
 void setupInt0();
-void nrf24_Start();
 
 //server
 void sensor11start();
@@ -35,22 +35,37 @@ void sensorSendDataViaUart();
 uint8_t data[9];
 uint8_t status;
 struct MEASURE BME180measure = {0, 0, 0, 0, 11};
-volatile uint8_t stage = 0;
-volatile uint16_t counter = 0;
-volatile uint16_t counter2 = 0;
-char startStringSensor11[] = {'s', 't', 'a', 'r', 't', '-', 's', '1', '1'};
+volatile uint8_t stage = 0;//stage 
+volatile uint16_t counter = 0;//counter for next mesure
+volatile uint16_t counter2 = 0;//counter for reset mesurements
+volatile uint16_t counter3 = 0;//counter for fail response form sensor
+volatile uint8_t sensorNr = 0;//nr of sensor from sensorsStrings
+char sensorsStrings[sensorsCount][9] = {
+    {'s', 't', 'a', 'r', 't', '-', 's', '1', '1'},
+    {'s', 't', 'a', 'r', 't', '-', 's', '2', '1'},
+    {'s', 't', 'a', 'r', 't', '-', 's', '2', '1'}
+};
+uint8_t sensorsAdresses[sensorsCount][1] = {
+    {0x11},
+    {0x12},
+    {0x21}
+};
 
 int main(void) {
+    //*
     slUART_SimpleTransmitInit();
+    /*/
+    slUART_Init();
+    //*/
     slSPI_Init();
     slNRF24_IoInit();
-    slNRF24_Init();
+    slNRF24_Init(*sensorsAdresses[0]);
     setupTimer();
     setupInt0();
     sei();
     stage = 1;
     slUART_WriteStringNl("\nStart server");
-    _delay_ms(5000);
+    _delay_ms(1000);
     slNRF24_Reset();
     while (1) {
         switch (stage) {
@@ -90,26 +105,41 @@ void setupInt0() {
    EIMSK |= (1 << INT0);     // Turns on INT0
 }
 
+uint8_t nextSensorNr(){
+    sensorNr = sensorNr +1;
+    if(sensorNr > sensorsCount){
+        sensorNr = 1;
+    }
+    return sensorNr;
+}
+
 //server
 
 //stage1
 void sensor11start() {
     counter = 0;
+    counter2 = 0;
+    counter3 = 1;
+    nextSensorNr();
     slNRF24_Reset();
     slNRF24_FlushTx();
     slNRF24_FlushRx();
-    slUART_WriteStringNl("Sensor11StartSending");
-    slNRF24_TxPowerUp();
-    slNRF24_TransmitPayload(&startStringSensor11, 9);
+    slNRF24_TxPowerUp(*sensorsAdresses[(sensorNr-1)]);
+    slUART_WriteString("S");
+    slUART_LogHexNl(*sensorsAdresses[(sensorNr-1)]);
+    slNRF24_TransmitPayload(&sensorsStrings[(sensorNr-1)], 9);
     clearData();
     stage = 0;//wait for interupt
 }
 
 
+
 //stage 3
 void getDataFromSensor(){
     counter = 0;
-    slNRF24_RxPowerUp();
+    counter2 = 0;
+    counter3 = 0;
+    slNRF24_RxPowerUp(*sensorsAdresses[(sensorNr-1)]);
     clearData();
     slNRF24_GetRegister(R_RX_PAYLOAD,data,9);
     stage = 4;
@@ -118,6 +148,8 @@ void getDataFromSensor(){
 //stage 4
 void sensorSendDataViaUart() {
     counter = 0;
+    counter2 = 0;
+    counter3 = 0;
     BME180measure = returnMEASUREFromBuffer(data);
     slUART_LogDecWithSign(BME180measure.temperature);
     slUART_WriteString("|");
@@ -129,7 +161,12 @@ void sensorSendDataViaUart() {
     slUART_WriteString("|");
     slUART_LogDec(BME180measure.sensorId);
     slUART_WriteStringNl("");
-    stage = 0;
+    if(sensorNr < sensorsCount){
+        stage = 1;
+    } else {
+        stage = 0;//all sensors wills be requested
+    }
+    slNRF24_PowerDown();
     clearData();
 }
 
@@ -137,8 +174,21 @@ ISR(TIMER0_OVF_vect) {
     //co 0.01632sek.
     if (stage == 0) {
         counter = counter + 1;
+        if(counter3 > 0){
+            counter3 = counter3 +1;
+        }
     } else {
         counter2 = counter2 + 1;
+    }
+    if(counter3 > 62){//failed get sensor data
+        slUART_WriteString("F");
+        slUART_LogHexNl(*sensorsAdresses[(sensorNr-1)]);
+        if(sensorNr < sensorsCount){
+            stage = 1;
+        } else {
+            stage = 0;
+        }
+        counter3 = 0;
     }
     if (counter == 1840) {//30 sek Next mesurements
         counter = 0;
@@ -156,14 +206,21 @@ ISR(INT0_vect){
     slNRF24_GetRegister(STATUS, &status, 1);
     cli();
     if ((status & (1 << 6)) != 0) {
+        counter = 0;
+        counter2 = 0;
+        counter3 = 0;
         //got data
         stage = 3;//getDataFromSensor
+        // slUART_WriteString("Got data from S");
+        // slUART_LogHexNl(*sensorsAdresses[(sensorNr-1)]);
     }
     if ((status & (1 << 5)) != 0) {
         slNRF24_FlushTx();
         slNRF24_FlushRx();
         slNRF24_Reset();
-        slNRF24_RxPowerUp();
+        slNRF24_RxPowerUp(*sensorsAdresses[(sensorNr-1)]);
+        // slUART_WriteString("Waiting for S");
+        // slUART_LogHexNl(*sensorsAdresses[(sensorNr-1)]);
         //sent data
         stage = 0;//wait for data from sensor
     }
